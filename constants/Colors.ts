@@ -14,6 +14,11 @@ export const palette = {
   textLink: '#88849F',
   placeholder: '#9B9AA8',
   divider: '#DAD9F2',
+  optionBackground: '#F6F6F6',
+  optionBorder: '#A5A5A5',
+  optionSelected: '#CECCFA',
+  progressTrack: '#E7E7EC',
+  questionBadge: '#151515',
   kakaoBackground: '#FEE500',
   kakaoText: '#392020',
 } as const;
