@@ -1,3 +1,4 @@
+import { palette } from '@/constants/Colors';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -67,37 +68,37 @@ function Field({ label, placeholder, secure = false, email = false, autoComplete
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput accessibilityLabel={label} placeholder={placeholder} placeholderTextColor="#9B9AA8" style={styles.input}
+      <TextInput accessibilityLabel={label} placeholder={placeholder} placeholderTextColor={palette.placeholder} style={styles.input}
         secureTextEntry={secure} keyboardType={email ? 'email-address' : 'default'} autoCapitalize="none" autoCorrect={false} autoComplete={autoComplete} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#EFEFFB' },
+  screen: { flex: 1, backgroundColor: palette.background },
   scroll: { flexGrow: 1, alignItems: 'center' },
   content: { width: '100%', maxWidth: 480, paddingHorizontal: 24, paddingBottom: 32 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 56 },
   back: { width: 44, height: 44, justifyContent: 'center' },
-  backText: { color: '#9391EE', fontSize: 38, lineHeight: 42 },
-  headerTitle: { color: '#55536F', fontSize: 16, fontWeight: '600' },
+  backText: { color: palette.primary, fontSize: 38, lineHeight: 42 },
+  headerTitle: { color: palette.textHeading, fontSize: 16, fontWeight: '600' },
   headerSpacer: { width: 44 },
   brand: { alignItems: 'center', paddingTop: 38, paddingBottom: 36 },
   logo: { width: 168, aspectRatio: 234 / 57, marginBottom: 28 },
-  title: { color: '#66638F', fontSize: 21, fontWeight: '700', textAlign: 'center' },
-  description: { color: '#9491B2', fontSize: 13, lineHeight: 21, marginTop: 12, textAlign: 'center' },
+  title: { color: palette.textLabel, fontSize: 21, fontWeight: '700', textAlign: 'center' },
+  description: { color: palette.textSubtle, fontSize: 13, lineHeight: 21, marginTop: 12, textAlign: 'center' },
   fields: { gap: 18 },
   field: { gap: 8 },
-  label: { color: '#66638F', fontSize: 13, fontWeight: '600', paddingLeft: 3 },
-  input: { backgroundColor: '#FFFFFF', borderRadius: 12, height: 54, paddingHorizontal: 18, color: '#48465E', fontSize: 14 },
+  label: { color: palette.textLabel, fontSize: 13, fontWeight: '600', paddingLeft: 3 },
+  input: { backgroundColor: palette.white, borderRadius: 12, height: 54, paddingHorizontal: 18, color: palette.textStrong, fontSize: 14 },
   agreement: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, marginTop: 18 },
-  checkbox: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: '#9391EE', alignItems: 'center', justifyContent: 'center' },
-  checked: { backgroundColor: '#9391EE' },
-  checkmark: { width: 6, height: 11, borderRightWidth: 2, borderBottomWidth: 2, borderColor: '#FFFFFF', transform: [{ rotate: '45deg' }] },
-  agreementText: { color: '#807D99', fontSize: 12, flex: 1, lineHeight: 18 },
-  button: { height: 56, backgroundColor: '#9391EE', borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 26 },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  checkbox: { width: 22, height: 22, borderRadius: 7, borderWidth: 1.5, borderColor: palette.primary, alignItems: 'center', justifyContent: 'center' },
+  checked: { backgroundColor: palette.primary },
+  checkmark: { width: 6, height: 11, borderRightWidth: 2, borderBottomWidth: 2, borderColor: palette.white, transform: [{ rotate: '45deg' }] },
+  agreementText: { color: palette.textAgreement, fontSize: 12, flex: 1, lineHeight: 18 },
+  button: { height: 56, backgroundColor: palette.primary, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 26 },
+  buttonText: { color: palette.white, fontSize: 16, fontWeight: '600' },
   returnLink: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 14 },
-  returnText: { color: '#88849F', fontSize: 13 },
+  returnText: { color: palette.textLink, fontSize: 13 },
   pressed: { opacity: 0.65 },
 });
