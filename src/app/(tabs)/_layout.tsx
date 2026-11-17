@@ -6,7 +6,7 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   return (
     <Tabs screenOptions={{ tabBarActiveTintColor: Colors[colorScheme].tint }}>
-      <Tabs.Screen name="index" options={{ title: '홈' }} />
+      <Tabs.Screen name="index" options={{ title: '로그인', headerShown: false, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="settings" options={{ title: '설정' }} />
     </Tabs>
   );
