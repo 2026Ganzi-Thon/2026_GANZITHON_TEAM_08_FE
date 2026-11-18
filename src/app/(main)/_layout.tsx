@@ -46,6 +46,7 @@ export default function MainLayout() {
     <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="home" />
       <Tabs.Screen name="group" />
+      <Tabs.Screen name="feed" />
     </Tabs>
   );
 }
