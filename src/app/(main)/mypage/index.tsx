@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Avatar from '@/components/common/Avatar';
@@ -9,6 +10,8 @@ import { palette } from '@/constants/theme';
 import { currentUser, groupInfo } from '@/data/feedStore';
 import { illustrations } from '@/data/illustrations';
 import { mindTypes } from '@/data/mindTypes';
+import { browserAuthEnabled } from '../../../components/auth/browserSession';
+import { getCurrentType, getResultCode, type CurrentType } from '../../../components/type-test/onboardingApi';
 
 const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
 const practice = { currentStreak: 3, longestStreak: 12, completedDays: 5 };
@@ -20,7 +23,27 @@ const missions = [
 const comingSoon = (title: string) => Alert.alert(title, '화면을 준비 중입니다.');
 
 export default function MyPageScreen() {
-  const mindType = mindTypes[currentUser.mindCode];
+  const [currentType, setCurrentType] = useState<CurrentType>();
+  const [typeError, setTypeError] = useState(false);
+  const usesWebSession = Platform.OS === 'web' && browserAuthEnabled;
+
+  useFocusEffect(useCallback(() => {
+    if (!usesWebSession) return;
+    let active = true;
+    setTypeError(false);
+    void getCurrentType().then((type) => {
+      if (active) setCurrentType(type);
+    }).catch(() => {
+      if (active) setTypeError(true);
+    });
+    return () => { active = false; };
+  }, [usesWebSession]));
+
+  const code = currentType ? getResultCode(currentType) : undefined;
+  const demoType = mindTypes[currentUser.mindCode];
+  const typeName = usesWebSession ? currentType?.typeName : demoType.name;
+  const typeDescription = usesWebSession ? currentType?.typeDescription : demoType.description;
+  const profileMeta = usesWebSession ? [currentType?.lifeStageLabel, code].filter(Boolean).join('  ') : `${currentUser.stage}  ${currentUser.mindCode}`;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
@@ -36,16 +59,16 @@ export default function MyPageScreen() {
           <Avatar size={65} />
           <View style={styles.identity}>
             <Text style={styles.name}>{currentUser.name}</Text>
-            <Text style={styles.profileMeta}>{currentUser.stage}  {currentUser.mindCode}</Text>
+            <Text style={styles.profileMeta}>{profileMeta}</Text>
           </View>
         </View>
 
         <View style={styles.typeCard}>
           <Pill label="나의 유형" style={styles.typeBadge} />
-          <Text style={styles.typeName}>{mindType.name.replace(/회복형$/, ' 회복형')}</Text>
+          <Text style={styles.typeName}>{typeName?.replace(/회복형$/, ' 회복형') ?? (typeError ? '유형을 불러오지 못했어요' : '유형 불러오는 중…')}</Text>
           <View style={styles.typeDetails}>
-            <Text style={styles.description}>{mindType.description}</Text>
-            <Pill label="유형 재검사" width={75} onPress={() => router.push('/type-test')} />
+            <Text style={styles.description}>{typeDescription}</Text>
+            <Pill label="유형 재검사" width={75} onPress={() => router.push({ pathname: '/type-test', params: { mode: 'retest' } })} />
           </View>
         </View>
 

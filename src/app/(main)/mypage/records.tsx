@@ -53,7 +53,7 @@ export default function PracticeRecordsScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="마이페이지로 돌아가기"
-            onPress={() => router.canGoBack() ? router.back() : router.replace('/mypage/index')}
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/mypage')}
             style={styles.back}
           >
             <Ionicons name="chevron-back" size={23} color={palette.text} />
