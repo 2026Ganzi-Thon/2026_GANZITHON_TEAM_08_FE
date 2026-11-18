@@ -1,3 +1,4 @@
+import { Modak_400Regular } from '@expo-google-fonts/modak';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -22,6 +23,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../../assets/fonts/SpaceMono-Regular.ttf'),
+    Modak_400Regular,
   });
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
@@ -52,6 +54,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(main)" options={{ headerShown: false }} />
         <Stack.Screen name="post/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="write" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="result/[type]" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: '???뺣낫' }} />
       </Stack>
     </ThemeProvider>
