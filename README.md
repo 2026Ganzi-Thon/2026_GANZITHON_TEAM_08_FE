@@ -45,3 +45,11 @@ npm run check:dependencies  # Expo 패키지 호환성 검사
 공식 문서: [Expo 시작하기](https://docs.expo.dev/get-started/create-a-project/), [기기 설정](https://docs.expo.dev/get-started/set-up-your-environment/).
 
 
+## 카카오 웹 로그인
+
+웹 빌드에 `EXPO_PUBLIC_WEB_AUTH=true`를 설정합니다. HTTPS 주소 하나에서 Expo 웹 앱을 제공하고, 같은 주소의 `/api/*` 요청은 Spring 백엔드로 프록시합니다. `/home`과 `/onboarding`은 Expo 앱으로 전달해야 합니다.
+
+백엔드의 `KAKAO_REDIRECT_URI`와 Kakao Developers에 등록된 Redirect URI는 모두 이 HTTPS 주소의 `/api/auth/kakao/callback`으로 맞춥니다. 백엔드가 발급하는 Secure·HttpOnly 세션 쿠키는 브라우저가 관리합니다.
+
+로컬 백엔드의 기본 포트는 8080이며 상태 확인 경로는 `/actuator/health`입니다. 현재 백엔드에는 Swagger/OpenAPI가 설정되어 있지 않습니다.
+
