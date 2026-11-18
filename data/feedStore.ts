@@ -98,6 +98,25 @@ export const addComment = (id: string, text: string) =>
     comments: [...post.comments, { id: `c${Date.now()}`, author: currentUser.name, text }],
   }));
 
+export const addPost = (input: { kind: MissionKind; text: string; imageUri?: string; visibility: Visibility }) => {
+  const post: Post = {
+    id: `p${Date.now()}`,
+    author: currentUser.name,
+    stage: currentUser.stage,
+    mindCode: currentUser.mindCode,
+    kind: input.kind,
+    text: input.text,
+    imageUri: input.imageUri,
+    likes: 0,
+    liked: false,
+    comments: [],
+    createdAt: Date.now(),
+    visibility: input.visibility,
+  };
+  posts = [post, ...posts];
+  emit();
+};
+
 export const currentUser = { name: '야옹', stage: '대학생', mindCode: 'ABBA' as MindCode };
 
 export const groupInfo = {

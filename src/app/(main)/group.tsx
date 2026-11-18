@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import Avatar from '@/components/common/Avatar';
 import BellHeader from '@/components/common/BellHeader';
@@ -11,8 +11,6 @@ import ReactionBar from '@/components/common/ReactionBar';
 import { palette } from '@/constants/theme';
 import { groupInfo, usePosts, type Post } from '@/data/feedStore';
 import { mindTypes } from '@/data/mindTypes';
-
-const comingSoon = (title: string) => Alert.alert(title, '화면을 준비 중입니다.');
 
 function GroupPost({ post }: { post: Post }) {
   const open = () => router.push({ pathname: '/post/[id]', params: { id: post.id } });
@@ -98,7 +96,7 @@ export default function GroupScreen() {
           {posts.map((post) => <GroupPost key={post.id} post={post} />)}
         </View>
       </ScrollView>
-      <Pressable accessibilityRole="button" accessibilityLabel="그룹 미션 작성" onPress={() => comingSoon('그룹 미션 작성')} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="그룹 미션 작성" onPress={() => router.push({ pathname: '/write', params: { kind: 'group' } })} style={({ pressed }) => [styles.fab, pressed && styles.pressed]}>
         <Ionicons name="create-outline" size={26} color={palette.white} />
       </Pressable>
     </View>

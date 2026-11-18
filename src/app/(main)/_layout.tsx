@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
@@ -25,6 +25,10 @@ function TabBar({ state, navigateToTab, insets }: TabBarProps) {
         const focused = current === route;
         const target = state.routes.find((item) => item.name === route);
         const onPress = () => {
+          if (route === 'write') {
+            router.push('/write');
+            return;
+          }
           if (!target) {
             Alert.alert(label, '화면을 준비 중입니다.');
             return;
