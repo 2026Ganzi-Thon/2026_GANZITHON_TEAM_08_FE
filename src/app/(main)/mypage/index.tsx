@@ -51,7 +51,7 @@ export default function MyPageScreen() {
 
         <View style={styles.summary}>
           <View style={styles.summaryCard}>
-            <Pressable accessibilityRole="button" onPress={() => comingSoon('나의 실천 기록')} hitSlop={8} style={styles.recordHeader}>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/mypage/records')} hitSlop={8} style={styles.recordHeader}>
               <Text style={styles.label}>나의 실천 기록</Text>
               <Ionicons name="chevron-forward" size={12} color={palette.text} />
             </Pressable>
