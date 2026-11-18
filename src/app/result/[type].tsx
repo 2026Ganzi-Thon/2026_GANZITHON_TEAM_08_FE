@@ -8,7 +8,7 @@ import { illustrations } from '@/data/illustrations';
 import { isMindCode, mindTypes } from '@/data/mindTypes';
 
 export default function ResultScreen() {
-  const { type } = useLocalSearchParams<{ type: string }>();
+  const { type, mode, name: resultName } = useLocalSearchParams<{ type: string; mode?: string; name?: string }>();
   const { top, bottom } = useSafeAreaInsets();
   const code = type?.toUpperCase() ?? '';
 
@@ -20,7 +20,9 @@ export default function ResultScreen() {
     );
   }
 
-  const { name, description } = mindTypes[code];
+  const { name: localName, description } = mindTypes[code];
+  const name = resultName || localName;
+  const retest = mode === 'retest';
   const illustration = illustrations[code];
 
   return (
@@ -37,8 +39,8 @@ export default function ResultScreen() {
       <Text style={styles.name}>{name}</Text>
       <Text style={styles.description}>{description}</Text>
       <View style={styles.spacer} />
-      <Pressable accessibilityRole="button" onPress={() => router.replace('/group')} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-        <Text style={styles.buttonText}>그룹 매칭하기</Text>
+      <Pressable accessibilityRole="button" onPress={() => router.dismissTo(retest ? '/mypage' : '/group')} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+        <Text style={styles.buttonText}>{retest ? '마이페이지로 돌아가기' : '내 그룹 보기'}</Text>
         <Ionicons name="arrow-forward" size={18} color="#F7F7F8" />
       </Pressable>
     </View>

@@ -2,25 +2,38 @@ export const browserAuthEnabled = process.env.EXPO_PUBLIC_WEB_AUTH === 'true';
 
 export const kakaoLoginUrl = 'https://mindot.kro.kr/api/auth/kakao';
 
-function postAuth(action: 'refresh' | 'logout') {
+function csrfHeaders() {
   const token = document.cookie.split(/;\s*/).find((cookie) => cookie.startsWith('XSRF-TOKEN='));
+  return token ? { 'X-XSRF-TOKEN': decodeURIComponent(token.slice('XSRF-TOKEN='.length)) } : undefined;
+}
+
+function postAuth(action: 'refresh' | 'logout') {
   return fetch(`/api/auth/${action}`, {
     method: 'POST',
     credentials: 'same-origin',
-    headers: token ? { 'X-XSRF-TOKEN': decodeURIComponent(token.slice('XSRF-TOKEN='.length)) } : {},
+    headers: csrfHeaders(),
   });
 }
 
 let refreshing: Promise<Response> | undefined;
 
-export async function getMyType() {
-  const request = () => fetch('/api/me/type', { credentials: 'same-origin' });
+export async function sessionFetch(path: `/api/${string}`, options?: RequestInit) {
+  const request = () => {
+    const headers = new Headers(options?.headers);
+    if (options?.method && options.method !== 'GET') {
+      const csrf = csrfHeaders();
+      if (csrf) headers.set('X-XSRF-TOKEN', csrf['X-XSRF-TOKEN']);
+    }
+    return fetch(path, { ...options, headers, credentials: 'same-origin' });
+  };
   const response = await request();
   if (response.status !== 401) return response;
 
   refreshing ??= postAuth('refresh').finally(() => { refreshing = undefined; });
   return (await refreshing).ok ? request() : response;
 }
+
+export const getMyType = () => sessionFetch('/api/me/type');
 
 export async function logout() {
   const session = await getMyType();
