@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/theme';
-import { isMindCode, mindTypes, type MindCode } from '@/data/mindTypes';
-
-const illustrations: Partial<Record<MindCode, ImageSourcePropType>> = {};
+import { illustrations } from '@/data/illustrations';
+import { isMindCode, mindTypes } from '@/data/mindTypes';
 
 export default function ResultScreen() {
   const { type } = useLocalSearchParams<{ type: string }>();
