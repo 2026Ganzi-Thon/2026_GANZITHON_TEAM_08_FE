@@ -51,6 +51,7 @@ export default function MainLayout() {
       <Tabs.Screen name="home" />
       <Tabs.Screen name="group" />
       <Tabs.Screen name="feed" />
+      <Tabs.Screen name="mypage" />
     </Tabs>
   );
 }
