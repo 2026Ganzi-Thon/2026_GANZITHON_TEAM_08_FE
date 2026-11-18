@@ -1,7 +1,7 @@
 import { palette } from '@/constants/Colors';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { questions } from '../components/type-test/questions';
 
@@ -19,7 +19,8 @@ export default function TypeTestQuestionsScreen() {
     if (selected < 0) return;
     const answers = `${(previousAnswers ?? '').slice(0, index)}${selected}`;
     if (last) {
-      Alert.alert('유형 검사 완료', '모든 답변을 선택했어요. 결과 화면은 준비 중입니다.');
+      const code = answers.replace(/[01]/g, (digit) => (digit === '0' ? 'A' : 'B'));
+      router.replace({ pathname: '/result/[type]', params: { type: code } });
       return;
     }
     router.push({ pathname: '/type-test-questions', params: { step: String(index + 1), answers } });
