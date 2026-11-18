@@ -1,45 +1,63 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import FeedPhoto from '@/components/common/FeedPhoto';
 import Pill from '@/components/common/Pill';
 import { palette } from '@/constants/theme';
+import { browserAuthEnabled } from '../../../components/auth/browserSession';
+import { dateKey, monthKey, todayInSeoul } from '../../../components/mypage/recordDates';
+import { getDayRecords, getMonthlyRecords, type DayRecord, type RecordItem } from '../../../components/mypage/recordsApi';
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 const missionLabels = { personal: '개인 미션', group: '그룹 미션' };
 const missionColors = { personal: palette.gradientTop, group: palette.primary };
 type MissionKind = keyof typeof missionLabels;
 
-const previewMissions = {
-  personal: {
-    title: '책상 한 쪽 비우기',
-    description: '공부 공간 한 쪽을 정리하고\n달라진 공간의 사진을 남겨주세요!',
-  },
-  group: {
-    title: '한 주의 휴식 풍경',
-    description: '이번 주 혼자 쉬며 좋았던 장면을 그룹에 남겨주세요!',
-  },
-};
-
-const previewDays: Partial<Record<number, MissionKind[]>> = {
-  2: ['personal'], 3: ['personal'], 4: ['personal'], 5: ['personal'],
-  7: ['personal', 'group'], 9: ['personal'], 11: ['personal'], 12: ['personal'],
-  13: ['group'], 18: ['personal'], 19: ['group'], 20: ['personal'], 21: ['personal'],
-};
+type DateResult<T> = { key: string; data?: T; error?: string };
 
 export default function PracticeRecordsScreen() {
-  const [month, setMonth] = useState(() => new Date(2026, 10, 1));
+  const [month, setMonth] = useState(() => {
+    const today = todayInSeoul();
+    return new Date(today.getFullYear(), today.getMonth(), 1);
+  });
   const [selectedDay, setSelectedDay] = useState<number>();
+  const [monthResult, setMonthResult] = useState<DateResult<Map<string, DayRecord>>>();
+  const [dayResult, setDayResult] = useState<DateResult<RecordItem[]>>();
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
   const firstWeekday = month.getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
   const numberOfCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
-  const records = year === 2026 && monthIndex === 10 ? previewDays : {};
-  const selectedRecords = selectedDay === undefined ? [] : records[selectedDay] ?? [];
+  const key = monthKey(month);
+  const selectedDate = selectedDay === undefined ? undefined : dateKey(new Date(year, monthIndex, selectedDay));
+  const activeMonth = monthResult?.key === key ? monthResult : undefined;
+  const activeDay = dayResult?.key === selectedDate ? dayResult : undefined;
+  const connected = Platform.OS === 'web' && browserAuthEnabled;
+
+  useEffect(() => {
+    if (!connected) return;
+    const request = new AbortController();
+    void getMonthlyRecords(key, request.signal).then(({ days }) => {
+      if (!request.signal.aborted) setMonthResult({ key, data: new Map(days.map((day) => [day.date, day])) });
+    }).catch((error: Error) => {
+      if (!request.signal.aborted) setMonthResult({ key, error: error.message });
+    });
+    return () => request.abort();
+  }, [connected, key]);
+
+  useEffect(() => {
+    if (!connected || !selectedDate) return;
+    const request = new AbortController();
+    void getDayRecords(selectedDate, request.signal).then((data) => {
+      if (!request.signal.aborted) setDayResult({ key: selectedDate, data });
+    }).catch((error: Error) => {
+      if (!request.signal.aborted) setDayResult({ key: selectedDate, error: error.message });
+    });
+    return () => request.abort();
+  }, [connected, selectedDate]);
 
   function moveMonth(offset: number) {
     setMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
@@ -80,16 +98,19 @@ export default function PracticeRecordsScreen() {
               const day = index - firstWeekday + 1;
               const date = new Date(year, monthIndex, day);
               const inMonth = day >= 1 && day <= daysInMonth;
-              const kinds = inMonth ? records[day] ?? [] : [];
+              const record = inMonth ? activeMonth?.data?.get(dateKey(date)) : undefined;
+              const kinds: MissionKind[] = [];
+              if (record?.personalCompleted) kinds.push('personal');
+              if (record?.groupCompleted && date.getDay() === 1) kinds.push('group');
               const selected = inMonth && day === selectedDay;
 
               return (
                 <Pressable
                   key={index}
-                  disabled={!inMonth}
+                  disabled={!inMonth || !connected}
                   accessibilityRole="button"
                   accessibilityLabel={`${date.getMonth() + 1}월 ${date.getDate()}일${kinds.map((kind) => `, ${missionLabels[kind]} 완료`).join('')}`}
-                  accessibilityState={{ selected, disabled: !inMonth }}
+                  accessibilityState={{ selected, disabled: !inMonth || !connected }}
                   onPress={() => setSelectedDay(day)}
                   style={styles.day}
                 >
@@ -111,25 +132,31 @@ export default function PracticeRecordsScreen() {
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: missionColors.group }]} />
-              <Text style={styles.legendText}>{missionLabels.group}</Text>
+              <Text style={styles.legendText}>{missionLabels.group} (주 시작일)</Text>
             </View>
           </View>
         </View>
+        {!activeMonth?.data && (
+          <Text accessibilityLiveRegion="polite" style={styles.status}>
+            {connected ? activeMonth?.error ?? '월별 기록 불러오는 중…' : '카카오 로그인 후 웹에서 기록을 확인해 주세요.'}
+          </Text>
+        )}
 
         {selectedDay !== undefined && (
           <View style={styles.details}>
             <View style={styles.detailsHeader}>
               <Text style={styles.detailTitle}>{monthIndex + 1}월 {selectedDay}일 ({weekdays[(firstWeekday + selectedDay - 1) % 7]})</Text>
-              <Text style={styles.recordCount}>{selectedRecords.length}개의 기록</Text>
+              {activeDay?.data && <Text style={styles.recordCount}>{activeDay.data.length}개의 기록</Text>}
             </View>
-            {selectedRecords.length === 0 && <Text style={styles.recordCount}>이날의 실천 기록이 없어요.</Text>}
-            {selectedRecords.map((kind) => (
-              <View key={kind} style={styles.record}>
-                <View style={styles.photo}><FeedPhoto size={76} radius={10} /></View>
+            {!activeDay?.data && <Text style={styles.recordCount}>{activeDay?.error ?? '기록 불러오는 중…'}</Text>}
+            {activeDay?.data?.length === 0 && <Text style={styles.recordCount}>이날의 실천 기록이 없어요.</Text>}
+            {activeDay?.data?.map((record) => (
+              <View key={record.certificationId} style={styles.record}>
+                <View style={styles.photo}><FeedPhoto uri={record.imageUrl ?? undefined} size={76} radius={10} /></View>
                 <View style={styles.recordText}>
-                  <Pill label={missionLabels[kind]} style={styles.badge} />
-                  <Text style={styles.detailTitle}>{previewMissions[kind].title}</Text>
-                  <Text style={styles.description}>{previewMissions[kind].description}</Text>
+                  <Pill label={missionLabels[record.missionType === 'GROUP' ? 'group' : 'personal']} style={styles.badge} />
+                  <Text style={styles.detailTitle}>{record.missionTitle}</Text>
+                  <Text style={styles.description}>{record.content}</Text>
                 </View>
               </View>
             ))}
@@ -166,6 +193,7 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 13, fontWeight: '600', color: palette.textMuted },
+  status: { marginTop: 16, marginHorizontal: 16, textAlign: 'center', color: palette.textMuted },
   details: { marginHorizontal: 16, marginTop: 31, padding: 15, borderRadius: 10, backgroundColor: palette.tint, gap: 10 },
   detailsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   detailTitle: { fontSize: 14, fontWeight: '600', color: palette.text },

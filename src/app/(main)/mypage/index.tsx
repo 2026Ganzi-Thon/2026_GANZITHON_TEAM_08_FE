@@ -11,32 +11,70 @@ import { currentUser, groupInfo } from '@/data/feedStore';
 import { illustrations } from '@/data/illustrations';
 import { mindTypes } from '@/data/mindTypes';
 import { browserAuthEnabled } from '../../../components/auth/browserSession';
+import { dateKey, monthKey, todayInSeoul, weekInSeoul } from '../../../components/mypage/recordDates';
+import { getCurrentGroupMission, getMonthlyRecords, getMyGroup, type MyGroup } from '../../../components/mypage/recordsApi';
 import { getCurrentType, getResultCode, type CurrentType } from '../../../components/type-test/onboardingApi';
 
 const weekdays = ['월', '화', '수', '목', '금', '토', '일'];
-const practice = { currentStreak: 3, longestStreak: 12, completedDays: 5 };
-const missions = [
-  { label: '이번 주 개인 미션', done: 3, total: 7 },
-  { label: '이번 주 그룹 미션', done: 1, total: 1 },
-];
+type Practice = { currentStreak: number; longestStreak: number; week: boolean[] };
+const demoPractice: Practice = { currentStreak: 3, longestStreak: 12, week: [true, true, true, true, true, false, false] };
 
 const comingSoon = (title: string) => Alert.alert(title, '화면을 준비 중입니다.');
 
 export default function MyPageScreen() {
   const [currentType, setCurrentType] = useState<CurrentType>();
   const [typeError, setTypeError] = useState(false);
+  const [practice, setPractice] = useState<Practice>();
+  const [practiceError, setPracticeError] = useState(false);
+  const [group, setGroup] = useState<MyGroup>();
+  const [groupError, setGroupError] = useState(false);
+  const [groupCompleted, setGroupCompleted] = useState<boolean>();
+  const [missionError, setMissionError] = useState(false);
   const usesWebSession = Platform.OS === 'web' && browserAuthEnabled;
 
   useFocusEffect(useCallback(() => {
     if (!usesWebSession) return;
-    let active = true;
+    const request = new AbortController();
+    const { signal } = request;
+    const today = todayInSeoul();
+    const currentMonth = monthKey(today);
+    const week = weekInSeoul(today);
+    const monthKeys = [...new Set(week.map(monthKey))];
     setTypeError(false);
+    setPracticeError(false);
+    setGroupError(false);
+    setMissionError(false);
+    setGroupCompleted(undefined);
     void getCurrentType().then((type) => {
-      if (active) setCurrentType(type);
+      if (!signal.aborted) setCurrentType(type);
     }).catch(() => {
-      if (active) setTypeError(true);
+      if (!signal.aborted) setTypeError(true);
     });
-    return () => { active = false; };
+
+    void Promise.all(monthKeys.map((month) => getMonthlyRecords(month, signal))).then((months) => {
+      if (signal.aborted) return;
+      const { currentStreak, longestStreak } = months[monthKeys.indexOf(currentMonth)];
+      const personalDates = new Set(months.flatMap(({ days }) => days.filter((day) => day.personalCompleted).map((day) => day.date)));
+      setPractice({ currentStreak, longestStreak, week: week.map((day) => personalDates.has(dateKey(day))) });
+    }).catch(() => {
+      if (!signal.aborted) setPracticeError(true);
+    });
+
+    void getMyGroup(signal).then(async (myGroup) => {
+      if (signal.aborted) return;
+      setGroup(myGroup);
+      if (myGroup.groupId === null) return;
+      try {
+        const mission = await getCurrentGroupMission(signal);
+        if (!signal.aborted) setGroupCompleted(mission.completedThisWeek);
+      } catch {
+        if (!signal.aborted) setMissionError(true);
+      }
+    }).catch(() => {
+      if (!signal.aborted) setGroupError(true);
+    });
+
+    return () => request.abort();
   }, [usesWebSession]));
 
   const code = currentType ? getResultCode(currentType) : undefined;
@@ -44,6 +82,18 @@ export default function MyPageScreen() {
   const typeName = usesWebSession ? currentType?.typeName : demoType.name;
   const typeDescription = usesWebSession ? currentType?.typeDescription : demoType.description;
   const profileMeta = usesWebSession ? [currentType?.lifeStageLabel, code].filter(Boolean).join('  ') : `${currentUser.stage}  ${currentUser.mindCode}`;
+  const displayedPractice = usesWebSession ? practice : demoPractice;
+  const latestCompleted = displayedPractice?.week.lastIndexOf(true);
+  const missions = [
+    { label: '이번 주 개인 미션', done: usesWebSession ? practice?.week.filter(Boolean).length : 3, total: 7 },
+    { label: '이번 주 그룹 미션', done: usesWebSession ? groupCompleted === undefined ? undefined : Number(groupCompleted) : 1, total: 1 },
+  ];
+  const groupName = usesWebSession ? group?.groupName : groupInfo.name;
+  const groupCode = usesWebSession ? code : groupInfo.mindCode;
+  const groupStage = usesWebSession ? currentType?.lifeStageLabel : groupInfo.stage;
+  const groupType = usesWebSession ? group?.typeName : groupInfo.mindCode;
+  const memberCount = usesWebSession ? group?.memberCount : groupInfo.members.length;
+  const nickname = usesWebSession ? group?.members.find((member) => member.isMe)?.nickname ?? '내 프로필' : currentUser.name;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
@@ -58,7 +108,7 @@ export default function MyPageScreen() {
         <View style={styles.profile}>
           <Avatar size={65} />
           <View style={styles.identity}>
-            <Text style={styles.name}>{currentUser.name}</Text>
+            <Text style={styles.name}>{nickname}</Text>
             <Text style={styles.profileMeta}>{profileMeta}</Text>
           </View>
         </View>
@@ -80,55 +130,61 @@ export default function MyPageScreen() {
             </Pressable>
             <View style={styles.streaks}>
               <View style={styles.streak}>
-                <Text style={styles.unit}><Text style={styles.count}>{practice.currentStreak}</Text>일</Text>
+                <Text style={styles.unit}><Text style={styles.count}>{displayedPractice?.currentStreak ?? '—'}</Text>일</Text>
                 <Text style={styles.meta}>현재 연속 완료</Text>
               </View>
               <View style={styles.streak}>
-                <Text style={styles.unit}><Text style={styles.count}>{practice.longestStreak}</Text>일</Text>
+                <Text style={styles.unit}><Text style={styles.count}>{displayedPractice?.longestStreak ?? '—'}</Text>일</Text>
                 <Text style={styles.meta}>최장 연속 완료</Text>
               </View>
             </View>
             <View style={styles.week}>
               {weekdays.map((day, index) => (
-                <View key={day} style={styles.day} accessible accessibilityLabel={`${day}요일 ${index < practice.completedDays ? '완료' : '미완료'}`}>
+                <View key={day} style={styles.day} accessible accessibilityLabel={`${day}요일 ${displayedPractice ? displayedPractice.week[index] ? '완료' : '미완료' : '기록 없음'}`}>
                   <Text style={styles.meta}>{day}</Text>
-                  <View style={[styles.dot, index < practice.completedDays && styles.completedDot, index === practice.completedDays - 1 && styles.latestDot]} />
+                  <View style={[styles.dot, displayedPractice?.week[index] && styles.completedDot, index === latestCompleted && styles.latestDot]} />
                 </View>
               ))}
             </View>
+            {practiceError && <Text style={styles.meta}>기록을 불러오지 못했어요.</Text>}
           </View>
 
           <View style={styles.summaryCard}>
             <Text style={styles.label}>나의 미션 현황</Text>
             <View style={styles.missions}>
               {missions.map(({ label, done, total }) => (
-                <View key={label} accessibilityRole="progressbar" accessibilityLabel={label} accessibilityValue={{ min: 0, max: total, now: done }}>
+                <View key={label} accessibilityRole="progressbar" accessibilityLabel={label} accessibilityValue={done === undefined ? { text: '집계 없음' } : { min: 0, max: total, now: done }}>
                   <View style={styles.missionHeading}>
                     <Text style={[styles.meta, styles.missionLabel]}>{label}</Text>
-                    <Text style={styles.meta}>{done}/{total}</Text>
+                    <Text style={styles.meta}>{done === undefined ? '—' : `${done}/${total}`}</Text>
                   </View>
-                  <View style={styles.track}><View style={[styles.fill, { width: `${done / total * 100}%` }]} /></View>
+                  <View style={styles.track}><View style={[styles.fill, { width: `${(done ?? 0) / total * 100}%` }]} /></View>
                 </View>
               ))}
+              {missionError && <Text style={styles.meta}>그룹 미션을 불러오지 못했어요.</Text>}
             </View>
           </View>
         </View>
 
-        <Pressable accessibilityRole="button" onPress={() => router.navigate('/group')} style={styles.groupCard}>
+        <Pressable accessibilityRole="button" disabled={!groupName} onPress={() => router.navigate('/group')} style={styles.groupCard}>
           <Text style={styles.label}>내 그룹</Text>
-          <View style={styles.groupRow}>
+          {groupName ? <View style={styles.groupRow}>
             <View style={styles.groupImageFrame}>
-              <Image source={illustrations[groupInfo.mindCode]} style={styles.groupImage} resizeMode="contain" />
+              {groupCode && <Image source={illustrations[groupCode]} style={styles.groupImage} resizeMode="contain" />}
             </View>
             <View style={styles.groupIdentity}>
-              <Text style={styles.groupName}>{groupInfo.name}</Text>
+              <Text style={styles.groupName}>{groupName}</Text>
               <View style={styles.groupTags}>
-                <Pill label={groupInfo.stage} />
-                <Pill label={groupInfo.mindCode} />
-                <Pill label={`${groupInfo.members.length}명`} />
+                {groupStage && <Pill label={groupStage} />}
+                {groupType && <Pill label={groupType} />}
+                {memberCount !== undefined && <Pill label={`${memberCount}명`} />}
               </View>
             </View>
-          </View>
+          </View> : (
+            <Text style={[styles.meta, styles.groupRow]}>
+              {groupError ? '그룹을 불러오지 못했어요.' : group ? '소속된 그룹이 없어요.' : '그룹 불러오는 중…'}
+            </Text>
+          )}
         </Pressable>
 
         <View style={styles.links}>
