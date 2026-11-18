@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { router } from 'expo-router';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,19 +8,9 @@ import Avatar from '@/components/common/Avatar';
 import FeedPhoto from '@/components/common/FeedPhoto';
 import MissionCard from '@/components/common/MissionCard';
 import Pill from '@/components/common/Pill';
+import ReactionBar from '@/components/common/ReactionBar';
 import { palette } from '@/constants/theme';
-
-type Activity = {
-  id: string;
-  author: string;
-  stage: string;
-  mindCode: string;
-  text: string;
-  imageUri?: string;
-  timeAgo: string;
-  likes: number;
-  comments: number;
-};
+import { timeAgo, usePosts, type Post } from '@/data/feedStore';
 
 const todayMission = {
   date: '11/21',
@@ -34,19 +24,13 @@ const weeklyMission = {
   description: '이번 주 혼자 쉬며 좋았던 장면 하나를 찾아\n그룹에 남겨주세요!',
 };
 
-const recentActivities: Activity[] = [
-  { id: 'a1', author: '주댕치', stage: '취준생', mindCode: 'AAAA', text: '어질러져 있던 책상을 드디어 정리했어요!', timeAgo: '1시간 전', likes: 10, comments: 3 },
-  { id: 'a2', author: '유자차', stage: '취준생', mindCode: 'ABBA', text: '오래 앉아있어서 몸이 찌뿌둥할 때\n다들 기지개 한 번씩 펴보세요!!\n척추 수술 2000만원...', timeAgo: '2시간 전', likes: 3, comments: 1 },
-];
-
 const comingSoon = (title: string) => Alert.alert(title, '화면을 준비 중입니다.');
 
-function ActivityCard({ item }: { item: Activity }) {
-  const [liked, setLiked] = useState(false);
-  const likes = item.likes + (liked ? 1 : 0);
+function ActivityCard({ item }: { item: Post }) {
+  const open = () => router.push({ pathname: '/post/[id]', params: { id: item.id } });
 
   return (
-    <Pressable accessibilityRole="button" onPress={() => comingSoon('피드 상세')} style={({ pressed }) => [styles.activity, pressed && styles.pressed]}>
+    <Pressable accessibilityRole="button" onPress={open} style={({ pressed }) => [styles.activity, pressed && styles.pressed]}>
       <View style={styles.activityRow}>
         {item.imageUri ? <FeedPhoto uri={item.imageUri} size={75} /> : null}
         <View style={styles.activityBody}>
@@ -56,23 +40,14 @@ function ActivityCard({ item }: { item: Activity }) {
             <Text style={styles.meta}>{item.stage}</Text>
             <Text style={styles.meta}>{item.mindCode}</Text>
             <View style={styles.spacer} />
-            <Pill label="개인 미션" width={63} />
+            <Pill label={item.kind === 'group' ? '그룹 미션' : '개인 미션'} width={63} />
           </View>
           <Text style={styles.activityText} numberOfLines={3}>{item.text}</Text>
         </View>
       </View>
       <View style={styles.activityFooter}>
-        <Text style={styles.meta}>{item.timeAgo}</Text>
-        <View style={styles.reactions}>
-          <Pressable accessibilityRole="button" accessibilityLabel="응원하기" onPress={() => setLiked((value) => !value)} hitSlop={8} style={styles.reaction}>
-            <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={liked ? palette.heart : palette.text} />
-            <Text style={styles.reactionText}>응원하기 {likes}</Text>
-          </Pressable>
-          <View style={styles.reaction}>
-            <Ionicons name="chatbubble-outline" size={20} color="#000000" />
-            <Text style={styles.reactionText}>댓글 {item.comments}</Text>
-          </View>
-        </View>
+        <Text style={styles.meta}>{timeAgo(item.createdAt)}</Text>
+        <ReactionBar post={item} onCommentPress={open} />
       </View>
     </Pressable>
   );
@@ -80,6 +55,7 @@ function ActivityCard({ item }: { item: Activity }) {
 
 export default function HomeScreen() {
   const { top } = useSafeAreaInsets();
+  const recentActivities = usePosts().filter((post) => post.visibility !== 'me').slice(0, 2);
 
   return (
     <ScrollView style={styles.screen} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
@@ -96,12 +72,12 @@ export default function HomeScreen() {
         <MissionCard
           pillLabel="오늘의 개인 미션" pillWidth={93} dateText={todayMission.date}
           title={todayMission.title} description={todayMission.description}
-          actionLabel="미션 하러 가기" onAction={() => comingSoon('개인 미션')}
+          actionLabel="미션 하러 가기" onAction={() => router.push({ pathname: '/write', params: { kind: 'personal' } })}
         />
         <MissionCard
           pillLabel="이번 주 그룹 미션" pillWidth={101} dateText={weeklyMission.range}
           title={weeklyMission.title} description={weeklyMission.description}
-          actionLabel="미션 하러 가기" onAction={() => comingSoon('그룹 미션')}
+          actionLabel="미션 하러 가기" onAction={() => router.push({ pathname: '/write', params: { kind: 'group' } })}
         />
         <Text style={styles.section}>최근 활동</Text>
         {recentActivities.map((item) => <ActivityCard key={item.id} item={item} />)}
@@ -128,7 +104,4 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, color: palette.textMuted },
   activityText: { fontSize: 12, lineHeight: 15, color: '#000000' },
   activityFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingHorizontal: 4 },
-  reactions: { flexDirection: 'row', alignItems: 'center', gap: 22 },
-  reaction: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  reactionText: { fontSize: 12, color: palette.text },
 });
