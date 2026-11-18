@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { palette } from '@/constants/theme';
 import { timeAgo, type Post } from '@/data/feedStore';
@@ -10,7 +11,7 @@ import Pill from './Pill';
 import ReactionBar from './ReactionBar';
 
 export default function PostCard({ post }: { post: Post }) {
-  const open = () => Alert.alert('피드 상세', '화면을 준비 중입니다.');
+  const open = () => router.push({ pathname: '/post/[id]', params: { id: post.id } });
   return (
     <Pressable accessibilityRole="button" onPress={open} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <View style={styles.top}>

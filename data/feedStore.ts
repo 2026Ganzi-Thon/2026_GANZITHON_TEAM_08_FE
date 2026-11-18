@@ -87,8 +87,18 @@ const update = (id: string, change: (post: Post) => Post) => {
 
 export const usePosts = () => useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
+export const usePost = (id: string | undefined) => usePosts().find((post) => post.id === id);
+
 export const toggleLike = (id: string) =>
   update(id, (post) => ({ ...post, liked: !post.liked, likes: post.likes + (post.liked ? -1 : 1) }));
+
+export const addComment = (id: string, text: string) =>
+  update(id, (post) => ({
+    ...post,
+    comments: [...post.comments, { id: `c${Date.now()}`, author: currentUser.name, text }],
+  }));
+
+export const currentUser = { name: '야옹', stage: '대학생', mindCode: 'ABBA' as MindCode };
 
 export const groupInfo = {
   name: 'Team대학생',
