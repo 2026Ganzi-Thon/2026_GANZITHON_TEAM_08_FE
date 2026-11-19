@@ -1,20 +1,19 @@
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import BellHeader from '@/components/common/BellHeader';
 import PostCard from '@/components/common/PostCard';
 import { palette } from '@/constants/theme';
-import { usePosts } from '@/data/feedStore';
+import { useFeed } from '@/src/components/feed/useFeed';
 
 const filters = [
   { key: 'all', label: '전체' },
   { key: 'group', label: '그룹' },
-  { key: 'personal', label: '개인' },
 ] as const;
 
 export default function FeedScreen() {
   const [filter, setFilter] = useState<(typeof filters)[number]['key']>('all');
-  const posts = usePosts().filter((post) => post.visibility !== 'me' && (filter === 'all' || post.kind === filter));
+  const { posts, loading, error, hasNext, cheer, refresh, loadMore } = useFeed(filter);
 
   return (
     <View style={styles.screen}>
@@ -32,11 +31,17 @@ export default function FeedScreen() {
       <FlatList
         data={posts}
         keyExtractor={(post) => post.id}
-        renderItem={({ item }) => <PostCard post={item} />}
+        renderItem={({ item }) => <PostCard post={item} onCheer={cheer} />}
         contentContainerStyle={styles.list}
         ItemSeparatorComponent={() => <View style={styles.gap} />}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={<Text style={styles.empty}>아직 올라온 기록이 없어요.</Text>}
+        onEndReached={hasNext ? loadMore : undefined}
+        onEndReachedThreshold={0.5}
+        refreshing={loading && posts.length === 0}
+        onRefresh={refresh}
+        ListHeaderComponent={error ? <Text style={styles.error}>{error}</Text> : undefined}
+        ListFooterComponent={loading && posts.length > 0 ? <ActivityIndicator color={palette.primary} style={styles.footer} /> : undefined}
+        ListEmptyComponent={loading || error ? undefined : <Text style={styles.empty}>아직 올라온 기록이 없어요.</Text>}
       />
     </View>
   );
@@ -51,5 +56,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: palette.white },
   list: { paddingHorizontal: 16, paddingBottom: 24, paddingTop: 2 },
   gap: { height: 16 },
+  error: { fontSize: 14, color: palette.heart, textAlign: 'center', marginBottom: 12 },
+  footer: { marginTop: 16 },
   empty: { fontSize: 14, color: palette.textMuted, textAlign: 'center', marginTop: 60 },
 });
