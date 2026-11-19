@@ -1,6 +1,7 @@
 import type { MindCode } from '@/data/mindTypes';
 
 import { getMyType, sessionFetch } from '../auth/browserSession';
+import { questions } from './questions';
 
 type Choice = 'A' | 'B';
 type Answer = { questionId: number; choice: Choice };
@@ -43,8 +44,21 @@ async function readJson<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-export const getQuestionnaire = async () =>
-  readJson<Questionnaire>(await sessionFetch('/api/onboarding/questions'));
+const fixedQuestionnaire: Questionnaire = {
+  lifeStages: [
+    { code: 'COLLEGE_STUDENT', label: '대학생' },
+    { code: 'JOB_SEEKER', label: '취업 준비생' },
+    { code: 'EARLY_CAREER', label: '사회초년생' },
+  ],
+  questions: questions.map(({ title, options }, index) => ({
+    questionId: index + 1,
+    content: title,
+    optionA: options[0],
+    optionB: options[1],
+  })),
+};
+
+export const getQuestionnaire = async (): Promise<Questionnaire> => fixedQuestionnaire;
 
 export const getRetestAnswers = async () =>
   readJson<Submission>(await sessionFetch('/api/me/type/retest'));
