@@ -10,7 +10,9 @@ import FeedPhoto from "./FeedPhoto";
 import Pill from "./Pill";
 import ReactionBar from "./ReactionBar";
 
-export default function PostCard({ post }: { post: Post }) {
+type Props = { post: Post; onCheer?: (post: Post) => void };
+
+export default function PostCard({ post, onCheer }: Props) {
   const open = () =>
     router.push({ pathname: "/post/[id]", params: { id: post.id } });
   return (
@@ -23,14 +25,14 @@ export default function PostCard({ post }: { post: Post }) {
         <View style={styles.who}>
           <Text style={styles.name}>{post.author}</Text>
           <View style={styles.meta}>
-            <Text style={styles.metaText}>{post.stage}</Text>
-            <Text style={styles.metaText}>{post.mindCode}</Text>
+            {post.stage ? <Text style={styles.metaText}>{post.stage}</Text> : null}
+            {post.mindCode ? <Text style={styles.metaText}>{post.mindCode}</Text> : null}
           </View>
         </View>
         <Ionicons name="ellipsis-horizontal" size={16} color="#555555" />
       </View>
       <Pill
-        label={post.kind === "group" ? "그룹 미션" : "개인 미션"}
+        label={post.missionTitle ?? (post.kind === "group" ? "그룹 미션" : "개인 미션")}
         width={61}
         style={styles.pill}
       />
@@ -41,7 +43,11 @@ export default function PostCard({ post }: { post: Post }) {
         </View>
       ) : null}
       <View style={styles.reaction}>
-        <ReactionBar post={post} onCommentPress={open} />
+        <ReactionBar
+          post={post}
+          onCommentPress={open}
+          onLikePress={onCheer ? () => onCheer(post) : undefined}
+        />
       </View>
       <Text style={styles.time}>{timeAgo(post.createdAt)}</Text>
     </Pressable>
