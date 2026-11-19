@@ -6,6 +6,10 @@ import { cheerCertification, getFeed, getGroupFeed, toPost, type FeedPage } from
 
 export type FeedScope = 'all' | 'group';
 
+const changeListeners = new Set<() => void>();
+
+export const notifyFeedChanged = () => changeListeners.forEach((listener) => listener());
+
 type Result = {
   key: string;
   posts: Post[];
@@ -23,6 +27,14 @@ export function useFeed(scope: FeedScope) {
   const [moreError, setMoreError] = useState<string>();
   const loadingMore = useRef(false);
   const key = `${scope}:${reload}`;
+
+  useEffect(() => {
+    const listener = () => setReload((value) => value + 1);
+    changeListeners.add(listener);
+    return () => {
+      changeListeners.delete(listener);
+    };
+  }, []);
 
   useEffect(() => {
     const request = new AbortController();

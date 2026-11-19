@@ -1,12 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Pill from '@/components/common/Pill';
 import { palette } from '@/constants/theme';
-import { addPost, type MissionKind, type Visibility } from '@/data/feedStore';
+import type { MissionKind, Visibility } from '@/data/feedStore';
+import { notifyFeedChanged } from '@/src/components/feed/useFeed';
+import { getCertifiableMission, submitCertification, type PickedImage, type TodayMission } from '@/src/components/write/writeApi';
 
 const MAX_LENGTH = 300;
 
@@ -27,7 +29,24 @@ export default function WriteScreen() {
   const [kind, setKind] = useState<MissionKind>(params.kind === 'personal' ? 'personal' : 'group');
   const [visibility, setVisibility] = useState<Visibility>('group');
   const [text, setText] = useState('');
-  const [imageUri, setImageUri] = useState<string>();
+  const [image, setImage] = useState<PickedImage>();
+  const [mission, setMission] = useState<{ kind: MissionKind; data?: TodayMission; error?: string }>();
+  const [message, setMessage] = useState<string>();
+  const [submitting, setSubmitting] = useState(false);
+  const imageUri = image?.uri;
+  const currentMission = mission?.kind === kind ? mission : undefined;
+
+  useEffect(() => {
+    const request = new AbortController();
+    void getCertifiableMission(kind, request.signal)
+      .then((data) => {
+        if (!request.signal.aborted) setMission({ kind, data });
+      })
+      .catch((error: Error) => {
+        if (!request.signal.aborted) setMission({ kind, error: error.message });
+      });
+    return () => request.abort();
+  }, [kind]);
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -36,16 +55,30 @@ export default function WriteScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-    if (!result.canceled) setImageUri(result.assets[0].uri);
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      setImage({ uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName ?? undefined });
+    }
   };
 
-  const submit = () => {
-    if (!text.trim()) {
-      Alert.alert('내용을 입력해 주세요', '오늘의 미션 기록을 적어주세요.');
-      return;
+  const submit = async () => {
+    if (submitting) return;
+    if (!text.trim()) return setMessage('오늘의 미션 기록을 적어주세요.');
+    if (!image) return setMessage('인증 사진을 추가해 주세요.');
+    const target = currentMission?.data;
+    if (!target) return setMessage(currentMission?.error ?? '미션 정보를 불러오는 중이에요.');
+    if (!target.canCertify) return setMessage('지금은 이 미션을 인증할 수 없어요.');
+    setSubmitting(true);
+    setMessage(undefined);
+    try {
+      await submitCertification({ kind, missionId: target.missionId, content: text.trim(), visibility, image });
+      notifyFeedChanged();
+      router.back();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '기록을 올리지 못했어요.');
+    } finally {
+      setSubmitting(false);
     }
-    addPost({ kind, text: text.trim(), imageUri, visibility });
-    router.back();
   };
 
   return (
@@ -56,7 +89,7 @@ export default function WriteScreen() {
         </Pressable>
         <Text style={styles.title}>피드 작성</Text>
         <Pressable accessibilityRole="button" onPress={submit} hitSlop={10}>
-          <Text style={styles.submit}>게시하기</Text>
+          <Text style={styles.submit}>{submitting ? '올리는 중' : '게시하기'}</Text>
         </Pressable>
       </View>
 
@@ -74,6 +107,9 @@ export default function WriteScreen() {
           />
           <Text style={styles.counter}>{text.length} / {MAX_LENGTH}</Text>
         </View>
+
+        {currentMission?.data ? <Text style={styles.missionName}>{currentMission.data.missionTitle}</Text> : null}
+        {message ?? currentMission?.error ? <Text style={styles.error}>{message ?? currentMission?.error}</Text> : null}
 
         <Pressable accessibilityRole="button" accessibilityLabel="사진 추가" onPress={pickImage} style={styles.photoBox}>
           {imageUri ? (
@@ -112,6 +148,8 @@ const styles = StyleSheet.create({
   counter: { alignSelf: 'flex-end', fontSize: 12, color: palette.textMuted, marginTop: 6 },
   photoBox: { width: 138, height: 138, marginTop: 24, borderWidth: 1, borderColor: palette.border, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   preview: { width: '100%', height: '100%' },
+  missionName: { fontSize: 12, color: palette.textMuted, marginTop: 12 },
+  error: { fontSize: 12, color: palette.heart, marginTop: 8 },
   plus: { fontSize: 20, color: palette.textMuted },
   photoLabel: { fontSize: 12, color: palette.textMuted, marginTop: 4 },
   visibility: { marginHorizontal: 16, height: 63, borderWidth: 1, borderColor: palette.border, borderRadius: 10, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 21 },
