@@ -4,12 +4,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { palette } from '@/constants/theme';
 import { toggleLike, type Post } from '@/data/feedStore';
 
-type Props = { post: Post; onCommentPress?: () => void };
+type Props = { post: Post; onCommentPress?: () => void; onLikePress?: () => void };
 
-export default function ReactionBar({ post, onCommentPress }: Props) {
+export default function ReactionBar({ post, onCommentPress, onLikePress }: Props) {
   return (
     <View style={styles.row}>
-      <Pressable accessibilityRole="button" accessibilityLabel="응원하기" onPress={() => toggleLike(post.id)} hitSlop={8} style={styles.item}>
+      <Pressable accessibilityRole="button" accessibilityLabel="응원하기" onPress={onLikePress ?? (() => toggleLike(post.id))} hitSlop={8} style={styles.item}>
         <Ionicons name={post.liked ? 'heart' : 'heart-outline'} size={20} color={post.liked ? palette.heart : palette.text} />
         <Text style={styles.label}>응원하기</Text>
         <Text style={styles.count}>{post.likes}</Text>

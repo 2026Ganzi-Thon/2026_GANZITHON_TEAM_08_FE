@@ -10,8 +10,10 @@ export type Comment = { id: string; author: string; text: string };
 export type Post = {
   id: string;
   author: string;
-  stage: string;
-  mindCode: MindCode;
+  stage?: string;
+  mindCode?: MindCode;
+  missionTitle?: string;
+  mine?: boolean;
   kind: MissionKind;
   text: string;
   imageUri?: string;
