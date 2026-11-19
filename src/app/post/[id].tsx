@@ -17,7 +17,7 @@ export default function PostDetailScreen() {
   const mockPost = usePost(id);
   const remote = usePostDetail(id, !mockPost);
   const post = mockPost ?? remote.post;
-  const readOnlyComments = !mockPost;
+  const isRemote = !mockPost;
   const { top, bottom } = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
 
@@ -33,9 +33,15 @@ export default function PostDetailScreen() {
     );
   }
 
-  const submit = () => {
+  const comments = isRemote ? remote.comments : post.comments;
+
+  const submit = async () => {
     const text = draft.trim();
-    if (!text || readOnlyComments) return;
+    if (!text) return;
+    if (isRemote) {
+      if (await remote.addComment(text)) setDraft('');
+      return;
+    }
     addComment(post.id, text);
     setDraft('');
   };
@@ -62,13 +68,14 @@ export default function PostDetailScreen() {
           <Text style={styles.body}>{post.text}</Text>
           {post.imageUri ? <View style={styles.photo}><FeedPhoto uri={post.imageUri} size={255} radius={20} /></View> : null}
           <View style={styles.reactionRow}>
-            <ReactionBar post={post} onLikePress={readOnlyComments ? remote.cheer : undefined} />
+            <ReactionBar post={post} onLikePress={isRemote ? remote.cheer : undefined} />
             <Text style={styles.time}>{timeAgo(post.createdAt)}</Text>
           </View>
         </View>
 
         <View style={styles.comments}>
-          {post.comments.map((comment) => (
+          {isRemote && remote.error ? <Text style={styles.commentError}>{remote.error}</Text> : null}
+          {comments.map((comment) => (
             <View key={comment.id} style={styles.comment}>
               <Avatar size={30} />
               <View style={styles.commentBody}>
@@ -82,7 +89,7 @@ export default function PostDetailScreen() {
 
       <View style={[styles.inputBar, { paddingBottom: Math.max(bottom, 12) }]}>
         <TextInput
-          accessibilityLabel="댓글 입력" placeholder={readOnlyComments ? '댓글 기능을 준비 중이에요.' : '댓글을 남겨보세요.'} editable={!readOnlyComments} placeholderTextColor={palette.textMuted}
+          accessibilityLabel="댓글 입력" placeholder="댓글을 남겨보세요." placeholderTextColor={palette.textMuted}
           style={styles.input} value={draft} onChangeText={setDraft} returnKeyType="send" onSubmitEditing={submit}
         />
         <Pill label="등록" width={50} height={25} fontSize={14} onPress={submit} />
@@ -110,6 +117,7 @@ const styles = StyleSheet.create({
   comments: { flexGrow: 1, backgroundColor: palette.panel, paddingHorizontal: 16, paddingTop: 29, paddingBottom: 24, gap: 22 },
   comment: { flexDirection: 'row', gap: 4, alignItems: 'flex-start' },
   commentBody: { flex: 1, gap: 0 },
+  commentError: { fontSize: 12, color: palette.heart },
   commentName: { fontWeight: '600', fontSize: 12, color: palette.text },
   commentText: { fontSize: 12, color: palette.text, marginTop: 0 },
   inputBar: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: palette.white, paddingHorizontal: 16, paddingTop: 14 },

@@ -14,6 +14,7 @@ export type Post = {
   mindCode?: MindCode;
   missionTitle?: string;
   mine?: boolean;
+  commentCount?: number;
   kind: MissionKind;
   text: string;
   imageUri?: string;

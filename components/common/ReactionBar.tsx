@@ -17,7 +17,7 @@ export default function ReactionBar({ post, onCommentPress, onLikePress }: Props
       <Pressable accessibilityRole="button" accessibilityLabel="댓글" onPress={onCommentPress} hitSlop={8} style={styles.item}>
         <Ionicons name="chatbubble-outline" size={20} color="#000000" />
         <Text style={styles.label}>댓글</Text>
-        <Text style={styles.count}>{post.comments.length}</Text>
+        <Text style={styles.count}>{post.commentCount ?? post.comments.length}</Text>
       </Pressable>
     </View>
   );

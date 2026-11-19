@@ -13,6 +13,7 @@ export type FeedItem = {
   visibility: ApiVisibility;
   cheerCount: number;
   cheered: boolean;
+  commentCount: number;
   mine: boolean;
   createdAt: string;
 };
@@ -69,6 +70,7 @@ export function toPost(item: FeedItem, scope: 'all' | 'group'): Post {
     likes: item.cheerCount,
     liked: item.cheered,
     comments: [],
+    commentCount: item.commentCount,
     createdAt: new Date(item.createdAt).getTime(),
     visibility: visibilityMap[item.visibility],
   };
