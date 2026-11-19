@@ -40,6 +40,11 @@ function feedPath(base: '/api/feed' | '/api/groups/me/feed', cursor?: number | n
   return `${base}?${query}` as const;
 }
 
+export type CertificationDetail = Omit<FeedItem, 'certificationId'>;
+
+export const getCertification = (certificationId: string, signal?: AbortSignal) =>
+  getJson<CertificationDetail>(`/api/certifications/${encodeURIComponent(certificationId)}`, signal);
+
 export const getFeed = (cursor?: number | null, signal?: AbortSignal) =>
   getJson<FeedPage>(feedPath('/api/feed', cursor), signal);
 
@@ -67,6 +72,10 @@ export function toPost(item: FeedItem, scope: 'all' | 'group'): Post {
     createdAt: new Date(item.createdAt).getTime(),
     visibility: visibilityMap[item.visibility],
   };
+}
+
+export function detailToPost(id: string, detail: CertificationDetail): Post {
+  return toPost({ ...detail, certificationId: Number(id) }, 'all');
 }
 
 export async function cheerCertification(certificationId: string) {
