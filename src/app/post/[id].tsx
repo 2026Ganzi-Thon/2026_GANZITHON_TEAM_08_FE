@@ -10,27 +10,32 @@ import Pill from '@/components/common/Pill';
 import ReactionBar from '@/components/common/ReactionBar';
 import { palette } from '@/constants/theme';
 import { addComment, timeAgo, usePost } from '@/data/feedStore';
+import { usePostDetail } from '@/src/components/feed/usePostDetail';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const post = usePost(id);
+  const mockPost = usePost(id);
+  const remote = usePostDetail(id, !mockPost);
+  const post = mockPost ?? remote.post;
+  const readOnlyComments = !mockPost;
   const { top, bottom } = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
 
   if (!post) {
+    const message = remote.loading ? '불러오는 중이에요.' : remote.error ?? '삭제되었거나 찾을 수 없는 게시글이에요.';
     return (
       <View style={[styles.missing, { paddingTop: top + 28 }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="뒤로" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={22} color="#000000" />
         </Pressable>
-        <Text style={styles.missingText}>삭제되었거나 찾을 수 없는 게시글이에요.</Text>
+        <Text style={styles.missingText}>{message}</Text>
       </View>
     );
   }
 
   const submit = () => {
     const text = draft.trim();
-    if (!text) return;
+    if (!text || readOnlyComments) return;
     addComment(post.id, text);
     setDraft('');
   };
@@ -48,16 +53,16 @@ export default function PostDetailScreen() {
           <View style={styles.author}>
             <Avatar size={45} />
             <Text style={styles.name}>{post.author}</Text>
-            <Text style={styles.meta}>{post.stage}</Text>
-            <Text style={styles.meta}>{post.mindCode}</Text>
+            {post.stage ? <Text style={styles.meta}>{post.stage}</Text> : null}
+            {post.mindCode ? <Text style={styles.meta}>{post.mindCode}</Text> : null}
             <View style={styles.spacer} />
             <Ionicons name="ellipsis-horizontal" size={16} color="#555555" />
           </View>
-          <Pill label={post.kind === 'group' ? '그룹 미션' : '개인 미션'} width={75} fontSize={14} style={styles.pill} />
+          <Pill label={post.missionTitle ?? (post.kind === 'group' ? '그룹 미션' : '개인 미션')} width={75} fontSize={14} style={styles.pill} />
           <Text style={styles.body}>{post.text}</Text>
           {post.imageUri ? <View style={styles.photo}><FeedPhoto uri={post.imageUri} size={255} radius={20} /></View> : null}
           <View style={styles.reactionRow}>
-            <ReactionBar post={post} />
+            <ReactionBar post={post} onLikePress={readOnlyComments ? remote.cheer : undefined} />
             <Text style={styles.time}>{timeAgo(post.createdAt)}</Text>
           </View>
         </View>
@@ -77,7 +82,7 @@ export default function PostDetailScreen() {
 
       <View style={[styles.inputBar, { paddingBottom: Math.max(bottom, 12) }]}>
         <TextInput
-          accessibilityLabel="댓글 입력" placeholder="댓글을 남겨보세요." placeholderTextColor={palette.textMuted}
+          accessibilityLabel="댓글 입력" placeholder={readOnlyComments ? '댓글 기능을 준비 중이에요.' : '댓글을 남겨보세요.'} editable={!readOnlyComments} placeholderTextColor={palette.textMuted}
           style={styles.input} value={draft} onChangeText={setDraft} returnKeyType="send" onSubmitEditing={submit}
         />
         <Pill label="등록" width={50} height={25} fontSize={14} onPress={submit} />

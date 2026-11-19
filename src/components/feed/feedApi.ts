@@ -1,3 +1,5 @@
+import type { Post, Visibility } from '@/data/feedStore';
+
 import { sessionFetch } from '../auth/browserSession';
 
 export type ApiVisibility = 'PRIVATE' | 'GROUP' | 'PUBLIC';
@@ -38,12 +40,53 @@ function feedPath(base: '/api/feed' | '/api/groups/me/feed', cursor?: number | n
   return `${base}?${query}` as const;
 }
 
+export type CertificationDetail = Omit<FeedItem, 'certificationId'>;
+
+export const getCertification = (certificationId: string, signal?: AbortSignal) =>
+  getJson<CertificationDetail>(`/api/certifications/${encodeURIComponent(certificationId)}`, signal);
+
 export const getFeed = (cursor?: number | null, signal?: AbortSignal) =>
   getJson<FeedPage>(feedPath('/api/feed', cursor), signal);
 
 export const getGroupFeed = (cursor?: number | null, signal?: AbortSignal) =>
   getJson<FeedPage>(feedPath('/api/groups/me/feed', cursor), signal);
 
-export function toTimestamp(createdAt: string) {
-  return new Date(createdAt).getTime();
+const visibilityMap: Record<ApiVisibility, Visibility> = {
+  PRIVATE: 'me',
+  GROUP: 'group',
+  PUBLIC: 'all',
+};
+
+export function toPost(item: FeedItem, scope: 'all' | 'group'): Post {
+  return {
+    id: String(item.certificationId),
+    author: item.nickname,
+    kind: scope === 'group' ? 'group' : 'personal',
+    missionTitle: item.missionTitle,
+    mine: item.mine,
+    text: item.content,
+    imageUri: item.imageUrl,
+    likes: item.cheerCount,
+    liked: item.cheered,
+    comments: [],
+    createdAt: new Date(item.createdAt).getTime(),
+    visibility: visibilityMap[item.visibility],
+  };
+}
+
+export function detailToPost(id: string, detail: CertificationDetail): Post {
+  return toPost({ ...detail, certificationId: Number(id) }, 'all');
+}
+
+export async function cheerCertification(certificationId: string) {
+  const response = await sessionFetch(`/api/certifications/${encodeURIComponent(certificationId)}/cheers`, {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('카카오 로그인 후 다시 시도해 주세요.');
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || '응원하지 못했어요.');
+  }
+  const body: { cheerCount: number } = await response.json();
+  return body.cheerCount;
 }
