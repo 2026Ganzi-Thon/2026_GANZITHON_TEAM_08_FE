@@ -30,7 +30,7 @@ function ActivityCard({ item }: { item: Post }) {
   const open = () => router.push({ pathname: '/post/[id]', params: { id: item.id } });
 
   return (
-    <Pressable accessibilityRole="button" onPress={open} style={({ pressed }) => [styles.activity, pressed && styles.pressed]}>
+    <Pressable onPress={open} style={({ pressed }) => [styles.activity, pressed && styles.pressed]}>
       <View style={styles.activityRow}>
         {item.imageUri ? <FeedPhoto uri={item.imageUri} size={75} /> : null}
         <View style={styles.activityBody}>

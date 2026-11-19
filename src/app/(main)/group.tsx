@@ -15,7 +15,7 @@ import { mindTypes } from '@/data/mindTypes';
 function GroupPost({ post }: { post: Post }) {
   const open = () => router.push({ pathname: '/post/[id]', params: { id: post.id } });
   return (
-    <Pressable accessibilityRole="button" onPress={open} style={({ pressed }) => [styles.post, pressed && styles.pressed]}>
+    <Pressable onPress={open} style={({ pressed }) => [styles.post, pressed && styles.pressed]}>
       <View style={styles.postTop}>
         <Avatar />
         <View style={styles.who}>
