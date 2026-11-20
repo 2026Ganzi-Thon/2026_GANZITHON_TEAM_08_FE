@@ -92,3 +92,25 @@ export async function cheerCertification(certificationId: string) {
   const body: { cheerCount: number } = await response.json();
   return body.cheerCount;
 }
+
+export async function updateCertificationContent(certificationId: string, content: string) {
+  const response = await sessionFetch(`/api/certifications/${encodeURIComponent(certificationId)}/content`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('카카오 로그인 후 다시 시도해 주세요.');
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || '글을 수정하지 못했어요.');
+  }
+}
+
+export async function deleteCertification(certificationId: string) {
+  const response = await sessionFetch(`/api/certifications/${encodeURIComponent(certificationId)}`, { method: 'DELETE' });
+  if (!response.ok) {
+    if (response.status === 401) throw new Error('카카오 로그인 후 다시 시도해 주세요.');
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || '글을 삭제하지 못했어요.');
+  }
+}

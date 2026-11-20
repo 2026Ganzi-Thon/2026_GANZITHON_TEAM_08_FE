@@ -11,11 +11,16 @@ import ReactionBar from '@/components/common/ReactionBar';
 import { palette } from '@/constants/theme';
 import { addComment, timeAgo, usePost } from '@/data/feedStore';
 import { usePostDetail } from '@/src/components/feed/usePostDetail';
+import { notifyFeedChanged } from '@/src/components/feed/useFeed';
 
 export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const mockPost = usePost(id);
   const remote = usePostDetail(id, !mockPost);
+  const [editing, setEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editDraft, setEditDraft] = useState('');
   const post = mockPost ?? remote.post;
   const isRemote = !mockPost;
   const { top, bottom } = useSafeAreaInsets();
@@ -34,6 +39,25 @@ export default function PostDetailScreen() {
   }
 
   const comments = isRemote ? remote.comments : post.comments;
+  const canEdit = isRemote && !!post.mine;
+
+  const startEdit = () => {
+    setEditDraft(post.text);
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    const text = editDraft.trim();
+    if (!text) return;
+    if (await remote.updateContent(text)) setEditing(false);
+  };
+
+  const removePost = async () => {
+    if (await remote.remove()) {
+      notifyFeedChanged();
+      router.back();
+    }
+  };
 
   const submit = async () => {
     const text = draft.trim();
@@ -62,10 +86,52 @@ export default function PostDetailScreen() {
             {post.stage ? <Text style={styles.meta}>{post.stage}</Text> : null}
             {post.mindCode ? <Text style={styles.meta}>{post.mindCode}</Text> : null}
             <View style={styles.spacer} />
-            <Ionicons name="ellipsis-horizontal" size={16} color="#555555" />
+            {canEdit && !editing ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="글 메뉴" onPress={() => { setMenuOpen((open) => !open); setConfirmDelete(false); }} hitSlop={10}>
+                <Ionicons name="ellipsis-horizontal" size={16} color="#555555" />
+              </Pressable>
+            ) : (
+              <Ionicons name="ellipsis-horizontal" size={16} color="#555555" />
+            )}
           </View>
+          {menuOpen && canEdit && !editing ? (
+            <View style={styles.menu}>
+              {confirmDelete ? (
+                <>
+                  <Text style={styles.menuText}>이 글을 삭제할까요? 되돌릴 수 없어요.</Text>
+                  <View style={styles.editActions}>
+                    <Pill label="삭제" width={50} height={25} fontSize={14} onPress={removePost} />
+                    <Pill label="취소" width={50} height={25} fontSize={14} onPress={() => setConfirmDelete(false)} />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Pressable accessibilityRole="button" onPress={() => { setMenuOpen(false); startEdit(); }}>
+                    <Text style={styles.menuText}>수정</Text>
+                  </Pressable>
+                  <Pressable accessibilityRole="button" onPress={() => setConfirmDelete(true)}>
+                    <Text style={[styles.menuText, styles.menuDanger]}>삭제</Text>
+                  </Pressable>
+                </>
+              )}
+              {remote.error ? <Text style={styles.commentError}>{remote.error}</Text> : null}
+            </View>
+          ) : null}
           <Pill label={post.missionTitle ?? (post.kind === 'group' ? '그룹 미션' : '개인 미션')} width={75} fontSize={14} style={styles.pill} />
-          <Text style={styles.body}>{post.text}</Text>
+          {editing ? (
+            <View style={styles.editBox}>
+              <TextInput
+                accessibilityLabel="글 수정" multiline maxLength={300} style={styles.editInput}
+                value={editDraft} onChangeText={setEditDraft}
+              />
+              <View style={styles.editActions}>
+                <Pill label="저장" width={50} height={25} fontSize={14} onPress={saveEdit} />
+                <Pill label="취소" width={50} height={25} fontSize={14} onPress={() => setEditing(false)} />
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.body}>{post.text}</Text>
+          )}
           {post.imageUri ? <View style={styles.photo}><FeedPhoto uri={post.imageUri} size={255} radius={20} /></View> : null}
           <View style={styles.reactionRow}>
             <ReactionBar post={post} onLikePress={isRemote ? remote.cheer : undefined} />
@@ -117,6 +183,12 @@ const styles = StyleSheet.create({
   comments: { flexGrow: 1, backgroundColor: palette.panel, paddingHorizontal: 16, paddingTop: 29, paddingBottom: 24, gap: 22 },
   comment: { flexDirection: 'row', gap: 4, alignItems: 'flex-start' },
   commentBody: { flex: 1, gap: 0 },
+  menu: { alignSelf: 'flex-end', gap: 10, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.panel },
+  menuText: { fontSize: 14, color: palette.text },
+  menuDanger: { color: palette.heart },
+  editBox: { marginTop: 14, gap: 10 },
+  editInput: { minHeight: 80, borderWidth: 1, borderColor: palette.border, borderRadius: 10, padding: 10, fontSize: 14, color: palette.text, textAlignVertical: 'top' },
+  editActions: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
   commentError: { fontSize: 12, color: palette.heart },
   commentName: { fontWeight: '600', fontSize: 12, color: palette.text },
   commentText: { fontSize: 12, color: palette.text, marginTop: 0 },
