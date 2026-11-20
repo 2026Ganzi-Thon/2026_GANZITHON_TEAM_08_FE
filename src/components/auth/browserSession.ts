@@ -42,3 +42,11 @@ export async function logout() {
   const response = await postAuth('logout');
   if (!response.ok) throw new Error('로그아웃하지 못했어요. 다시 시도해 주세요.');
 }
+
+export async function withdraw() {
+  const response = await sessionFetch('/api/auth/withdraw', { method: 'DELETE' });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || '회원 탈퇴하지 못했어요. 다시 시도해 주세요.');
+  }
+}
