@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Comment, Post } from '@/data/feedStore';
 
 import { createComment, getComments } from './commentApi';
-import { cheerCertification, detailToPost, getCertification } from './feedApi';
+import { cheerCertification, detailToPost, deleteCertification, getCertification, updateCertificationContent } from './feedApi';
 
 type Result = { id: string; post?: Post; error?: string };
 type CommentResult = { id: string; items: Comment[]; error?: string };
@@ -65,6 +65,36 @@ export function usePostDetail(id: string | undefined, enabled: boolean) {
     [current, comments],
   );
 
+  const updateContent = useCallback(
+    async (text: string) => {
+      const post = current?.post;
+      if (!post) return false;
+      try {
+        await updateCertificationContent(post.id, text);
+        setActionError(undefined);
+        setResult({ id: post.id, post: { ...post, text } });
+        return true;
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : '글을 수정하지 못했어요.');
+        return false;
+      }
+    },
+    [current],
+  );
+
+  const remove = useCallback(async () => {
+    const post = current?.post;
+    if (!post) return false;
+    try {
+      await deleteCertification(post.id);
+      setActionError(undefined);
+      return true;
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : '글을 삭제하지 못했어요.');
+      return false;
+    }
+  }, [current]);
+
   return {
     post: current?.post,
     comments: comments?.items ?? [],
@@ -72,5 +102,7 @@ export function usePostDetail(id: string | undefined, enabled: boolean) {
     error: current?.error ?? actionError ?? comments?.error,
     cheer,
     addComment,
+    updateContent,
+    remove,
   };
 }
